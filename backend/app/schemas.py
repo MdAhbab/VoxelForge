@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from .models import QuoteSource, OrderStatus
+from .models import QuoteSource
 
 # Materials
 class MaterialBase(BaseModel):
@@ -18,8 +18,7 @@ class MaterialBase(BaseModel):
 class MaterialOut(MaterialBase):
     id: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Catalog
 class ParamDef(BaseModel):
@@ -45,8 +44,7 @@ class CatalogPartOut(BaseModel):
     presets_json: List[Preset]
     thumb: Optional[str]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Uploads
 class ModelUploadOut(BaseModel):
@@ -59,21 +57,20 @@ class ModelUploadOut(BaseModel):
     issues_json: List[Dict[str, Any]]
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Pricing
 class QuoteInput(BaseModel):
     source: QuoteSource = QuoteSource.upload
     part_id: Optional[str] = None
     upload_id: Optional[str] = None
-    volumeCm3: float
-    bboxMax: float
+    volumeCm3: float = Field(gt=0)
+    bboxMax: float = Field(gt=0)
     materialId: str
-    infill: int
-    layerHeight: float
+    infill: int = Field(ge=0, le=100)
+    layerHeight: float = Field(gt=0)
     finish: str
-    qty: int = 1
+    qty: int = Field(default=1, ge=1)
 
 class QuoteSegment(BaseModel):
     key: str
@@ -91,8 +88,7 @@ class QuoteOut(BaseModel):
     effectiveVolume: float
     currency: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Preflight
 class PreflightRequest(BaseModel):
@@ -107,8 +103,7 @@ class PreflightReportOut(BaseModel):
     suggested_orientation_json: Dict[str, Any]
     score: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Agents
 class PrintabilityAgentRequest(BaseModel):

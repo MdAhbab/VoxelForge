@@ -19,24 +19,30 @@ export interface Material {
 
 export let MATERIALS: Material[] = [];
 
-export function setMaterials(mats: Material[]) {
-  // Map backend MaterialOut to frontend Material
-  MATERIALS = mats.map((m: any) => ({
-    id: m.id,
-    name: m.name,
-    process: m.process as Process,
-    density: m.density_g_cm3,
-    rate: m.rate_per_cm3,
-    machineRate: m.machine_rate_per_min,
-    minWall: m.min_wall_mm,
-    maxBbox: m.max_bbox_mm,
-    leadDays: 2, // Default or map if added
-    surface: m.finishes_json[0].toLowerCase().includes("smooth") ? "glossy" : "matte", // Heuristic
-    swatch: m.colors_json[0] || "#cccccc",
-    colors: m.colors_json,
-    finishes: m.finishes_json,
-    note: "Loaded from backend",
-  }));
+export function setMaterials(mats: any[]) {
+  // Merge the backend's authoritative numbers over the richer static record so we
+  // keep curated presentation fields (surface, lead time, copy) the API doesn't carry.
+  MATERIALS = mats.map((m) => {
+    const base = FALLBACK_MATERIALS.find((f) => f.id === m.id);
+    const colors: string[] = m.colors_json ?? base?.colors ?? ["#cccccc"];
+    const finishes: string[] = m.finishes_json ?? base?.finishes ?? ["As printed"];
+    return {
+      id: m.id,
+      name: m.name ?? base?.name ?? m.id,
+      process: (m.process as Process) ?? base?.process ?? "FDM",
+      density: m.density_g_cm3 ?? base?.density ?? 1.24,
+      rate: m.rate_per_cm3 ?? base?.rate ?? 3.4,
+      machineRate: m.machine_rate_per_min ?? base?.machineRate ?? 1.1,
+      minWall: m.min_wall_mm ?? base?.minWall ?? 1.0,
+      maxBbox: m.max_bbox_mm ?? base?.maxBbox ?? 250,
+      leadDays: base?.leadDays ?? 2,
+      surface: base?.surface ?? (finishes[0]?.toLowerCase().includes("smooth") ? "glossy" : "matte"),
+      swatch: base?.swatch ?? colors[0] ?? "#cccccc",
+      colors,
+      finishes,
+      note: base?.note ?? "",
+    };
+  });
 }
 
 const FALLBACK_MATERIALS: Material[] = [

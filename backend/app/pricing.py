@@ -1,4 +1,3 @@
-import math
 from typing import List, Dict, Any
 
 def compute_quote(
@@ -9,6 +8,13 @@ def compute_quote(
     qty: int,
     material: Any
 ) -> Dict[str, Any]:
+    # Clamp inputs so the function is total — never divides by zero or returns NaN,
+    # even if a caller bypasses the request-schema validation.
+    volume_cm3 = max(volume_cm3, 0.0)
+    infill = min(max(infill, 0), 100)
+    layer_height = max(layer_height, 0.05)
+    qty = max(qty, 1)
+
     shell_frac = 0.32
     eff_frac = shell_frac + (1 - shell_frac) * (infill / 100.0)
     effective_volume = volume_cm3 * eff_frac

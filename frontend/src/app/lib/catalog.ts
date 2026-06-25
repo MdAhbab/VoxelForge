@@ -152,20 +152,34 @@ function buildPlanter(raw: Record<string, number>): Mesh {
 
 export let CATALOG: CatalogPart[] = [];
 
+const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
 export function setCatalog(parts: any[]) {
-  CATALOG = parts.map((p) => {
-    // Map backend part to frontend part, matching mesh builder by name or id heuristic
-    const fallback = FALLBACK_CATALOG.find((f) => f.id === p.id || f.name === p.name) ?? FALLBACK_CATALOG[0];
-    return {
-      id: p.id,
-      name: p.name,
-      category: p.category,
-      blurb: p.blurb || fallback.blurb,
-      params: p.params_schema_json.map((pd: any) => ({ ...pd, def: pd.def })),
-      presets: p.presets_json,
-      build: fallback.build,
-    };
-  });
+  // Each mesh builder reads a specific set of param keys, so a backend part is only
+  // renderable if it maps to a known builder. We pair it with that builder AND its
+  // matching params/presets (the builder can't read an arbitrary schema), while
+  // letting the backend override display metadata. Unmappable parts are skipped
+  // rather than rendered as the wrong shape with dead sliders.
+  const mapped = parts
+    .map((p) => {
+      const fallback =
+        FALLBACK_CATALOG.find((f) => f.id === p.id) ??
+        FALLBACK_CATALOG.find((f) => normalize(f.name) === normalize(p.name ?? ""));
+      if (!fallback) return null;
+      return {
+        id: p.id || fallback.id,
+        name: p.name || fallback.name,
+        category: p.category || fallback.category,
+        blurb: p.blurb || fallback.blurb,
+        params: fallback.params,
+        presets: Array.isArray(p.presets_json) && p.presets_json.length ? p.presets_json : fallback.presets,
+        build: fallback.build,
+      } as CatalogPart;
+    })
+    .filter((p): p is CatalogPart => p !== null);
+
+  // Never degrade below the built-in catalogue if nothing maps cleanly.
+  if (mapped.length) CATALOG = mapped;
 }
 
 const FALLBACK_CATALOG: CatalogPart[] = [

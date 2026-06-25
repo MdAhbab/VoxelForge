@@ -9,7 +9,6 @@ import { MATERIALS, materialById } from "../lib/materials";
 import { computeQuote, fmt, searchBudget, CURRENCY } from "../lib/pricing";
 import { meshVolumeCm3, scaleMesh, type Mesh } from "../lib/geometry";
 import { useCart, useUpload, useAuth, useDesigns } from "../lib/store";
-import * as api from "../lib/api";
 
 import { Viewport3D, type ViewMode } from "../components/forge/Viewport3D";
 import { ParamSlider } from "../components/forge/ParamSlider";
@@ -102,26 +101,13 @@ export function Configurator() {
   const nonManifold = isUpload ? !model!.manifold : false;
   const flaggedTags = thinWall ? ["wall"] : [];
 
-  const [quote, setQuote] = useState<any>({
-    segments: [], total: 0, totalQty: 0, estMinutes: 0, supportCm3: 0, effectiveVolume: 0, currency: "৳"
-  });
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      api.createQuote({
-        source: isUpload ? "upload" : "catalog",
-        part_id: isUpload ? undefined : partId,
-        upload_id: isUpload ? UPLOAD_ID : undefined,
-        volumeCm3: volume,
-        materialId,
-        infill,
-        layerHeight,
-        finish,
-        qty
-      }).then(setQuote).catch(console.error);
-    }, 150);
-    return () => clearTimeout(t);
-  }, [volume, bboxMax, materialId, infill, layerHeight, finish, qty, isUpload, partId]);
+  // Price locally and synchronously — the pricing engine is deterministic and on-device,
+  // so the quote re-computes in the same frame as a slider move (no network round-trip,
+  // no per-keystroke DB writes, and it works offline / on the backend-less static deploy).
+  const quote = useMemo(
+    () => computeQuote({ volumeCm3: volume, bboxMax, materialId, infill, layerHeight, finish, qty }),
+    [volume, bboxMax, materialId, infill, layerHeight, finish, qty]
+  );
 
   const preflightScore = Math.max(40, 100 - (thinWall ? 22 : 0) - (overSize ? 30 : 0) - (nonManifold ? 18 : 0) - (infill > 60 ? 4 : 0));
   const partName = isUpload ? model!.filename : part!.name;

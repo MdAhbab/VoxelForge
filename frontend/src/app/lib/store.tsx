@@ -195,15 +195,19 @@ const AppDataCtx = createContext<{ ready: boolean }>({ ready: false });
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    let cancelled = false;
     Promise.all([api.getMaterials(), api.getCatalog()]).then(([mats, cats]) => {
-      setMaterials(mats);
-      setCatalog(cats);
-      setReady(true);
+      if (cancelled) return;
+      // Only adopt backend data when it actually has rows — an unseeded backend
+      // returns `[]` with a 200, which must NOT wipe the static fallback catalogue.
+      if (Array.isArray(mats) && mats.length) setMaterials(mats);
+      if (Array.isArray(cats) && cats.length) setCatalog(cats);
     }).catch(e => {
-      console.error("Failed to load app data from backend", e);
-      // Fallback: continue with static data
-      setReady(true); 
-    });
+      // No backend (e.g. the static deploy) — the app is fully usable on the
+      // built-in fallback data, so this is expected, not a hard error.
+      console.info("Using built-in catalogue (backend unavailable)", e);
+    }).finally(() => { if (!cancelled) setReady(true); });
+    return () => { cancelled = true; };
   }, []);
   if (!ready) return <div className="p-10 flex h-screen w-full items-center justify-center font-mono text-sm opacity-50">Initializing engine...</div>;
   return <AppDataCtx.Provider value={{ ready }}>{children}</AppDataCtx.Provider>;

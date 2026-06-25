@@ -1,5 +1,5 @@
 import uuid
-import datetime
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -7,15 +7,26 @@ from typing import List
 
 from . import models, schemas, pricing
 from .database import engine, get_db
+from .seed import seed_db
 
-models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create tables and seed reference data (materials + catalogue) on boot so the
+    # API serves real rows on a fresh database instead of empty lists.
+    models.Base.metadata.create_all(bind=engine)
+    seed_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
+    # Wildcard origin + credentials is rejected by browsers; this API is token-less,
+    # so allow any origin without credentials (the dev front-end sends none).
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

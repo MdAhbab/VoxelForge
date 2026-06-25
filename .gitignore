@@ -1,0 +1,15 @@
+# deps & build
+node_modules/
+dist/
+.vercel/
+
+# python
+backend/venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+
+# env & logs
+.env
+*.log

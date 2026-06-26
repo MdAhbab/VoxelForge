@@ -153,19 +153,28 @@ function buildPlanter(raw: Record<string, number>): Mesh {
 export let CATALOG: CatalogPart[] = [];
 
 export function setCatalog(parts: any[]) {
-  CATALOG = parts.map((p) => {
-    // Map backend part to frontend part, matching mesh builder by name or id heuristic
-    const fallback = FALLBACK_CATALOG.find((f) => f.id === p.id || f.name === p.name) ?? FALLBACK_CATALOG[0];
-    return {
-      id: p.id,
-      name: p.name,
-      category: p.category,
-      blurb: p.blurb || fallback.blurb,
-      params: p.params_schema_json.map((pd: any) => ({ ...pd, def: pd.def })),
-      presets: p.presets_json,
-      build: fallback.build,
-    };
-  });
+  // Never let an empty/failed load wipe the working fallback catalog.
+  if (!Array.isArray(parts) || parts.length === 0) return;
+  // A part is only usable if we have a geometry builder for its id — the mesh
+  // generators live on the frontend. Backend ids mirror these (see seed.py), so a
+  // missing match means a backend part we can't render; skip it rather than render
+  // the wrong shape with dead sliders.
+  const mapped = parts
+    .map((p) => {
+      const base = FALLBACK_CATALOG.find((f) => f.id === p.id);
+      if (!base) return null;
+      return {
+        id: p.id,
+        name: p.name ?? base.name,
+        category: p.category ?? base.category,
+        blurb: p.blurb || base.blurb,
+        params: Array.isArray(p.params_schema_json) && p.params_schema_json.length ? p.params_schema_json : base.params,
+        presets: Array.isArray(p.presets_json) && p.presets_json.length ? p.presets_json : base.presets,
+        build: base.build,
+      } as CatalogPart;
+    })
+    .filter((p): p is CatalogPart => p !== null);
+  if (mapped.length) CATALOG = mapped;
 }
 
 const FALLBACK_CATALOG: CatalogPart[] = [

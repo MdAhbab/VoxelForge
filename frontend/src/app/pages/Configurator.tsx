@@ -102,26 +102,14 @@ export function Configurator() {
   const nonManifold = isUpload ? !model!.manifold : false;
   const flaggedTags = thinWall ? ["wall"] : [];
 
-  const [quote, setQuote] = useState<any>({
-    segments: [], total: 0, totalQty: 0, estMinutes: 0, supportCm3: 0, effectiveVolume: 0, currency: "৳"
-  });
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      api.createQuote({
-        source: isUpload ? "upload" : "catalog",
-        part_id: isUpload ? undefined : partId,
-        upload_id: isUpload ? UPLOAD_ID : undefined,
-        volumeCm3: volume,
-        materialId,
-        infill,
-        layerHeight,
-        finish,
-        qty
-      }).then(setQuote).catch(console.error);
-    }, 150);
-    return () => clearTimeout(t);
-  }, [volume, bboxMax, materialId, infill, layerHeight, finish, qty, isUpload, partId]);
+  // Quote is computed locally and synchronously so the price moves in the same
+  // frame as the slider — the documented "re-prices in the same frame" behaviour,
+  // and it keeps working with no backend (Vercel preview). The backend shares the
+  // identical formula and is used only to persist the quote on add-to-cart.
+  const quote = useMemo(
+    () => computeQuote({ volumeCm3: volume, bboxMax, materialId, infill, layerHeight, finish, qty }),
+    [volume, bboxMax, materialId, infill, layerHeight, finish, qty]
+  );
 
   const preflightScore = Math.max(40, 100 - (thinWall ? 22 : 0) - (overSize ? 30 : 0) - (nonManifold ? 18 : 0) - (infill > 60 ? 4 : 0));
   const partName = isUpload ? model!.filename : part!.name;
@@ -154,6 +142,14 @@ export function Configurator() {
       finish, infill, layerHeight, qty, unitPrice: quote.total, bbox: mesh.bbox, preflightScore,
     });
     toast.success("Added to cart", { description: `${partName} · ${material.name}` });
+    // Persist the configured quote server-side (best-effort; never blocks the UI
+    // and is a no-op when the backend isn't running).
+    api.createQuote({
+      source: isUpload ? "upload" : "catalog",
+      part_id: isUpload ? undefined : partId,
+      upload_id: isUpload ? UPLOAD_ID : undefined,
+      volumeCm3: volume, bboxMax, materialId, infill, layerHeight, finish, qty,
+    }).catch(() => { /* offline / no backend — cart already updated locally */ });
   }
   function saveDesign() {
     if (!user) { toast.message("Sign in to save designs", { description: "Your saved designs live in your account." }); nav("/login", { state: { from: "/configure" } }); return; }

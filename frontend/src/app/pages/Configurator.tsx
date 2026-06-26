@@ -184,7 +184,7 @@ export function Configurator() {
 
       <div className="grid gap-4 lg:grid-cols-[260px_1fr_360px]">
         {/* ---------- LEFT: part source ---------- */}
-        <aside className="order-2 lg:order-1 space-y-3">
+        <aside className="order-2 lg:order-1 min-w-0 space-y-3">
           <SectionTag index="01" label="Part source" />
           {/* horizontal scroll on mobile, vertical list on desktop */}
           <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 lg:mx-0 lg:grid lg:grid-cols-1 lg:overflow-visible lg:px-0">
@@ -212,7 +212,7 @@ export function Configurator() {
         </aside>
 
         {/* ---------- CENTER: viewport ---------- */}
-        <section className="order-1 lg:order-2">
+        <section className="order-1 lg:order-2 min-w-0">
           <div className="relative overflow-hidden rounded-[6px] border border-hairline bg-bg-elev">
             <div className="flex items-center justify-between gap-2 px-3 py-2 hairline-b">
               <ToggleGroup type="single" value={mode} onValueChange={(v) => v && setMode(v as ViewMode)} className="gap-1">
@@ -249,7 +249,7 @@ export function Configurator() {
         </section>
 
         {/* ---------- RIGHT: controls ---------- */}
-        <aside className="order-3 space-y-5">
+        <aside className="order-3 min-w-0 space-y-5">
           <Tabs defaultValue="shape">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="shape" className="mono text-[0.72rem]">Shape</TabsTrigger>

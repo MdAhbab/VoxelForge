@@ -66,7 +66,7 @@ export function Operator() {
               </defs>
               <CartesianGrid stroke="var(--hairline)" vertical={false} />
               <XAxis dataKey="day" stroke="var(--ink-dim)" tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--ink-dim)" tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }} tickLine={false} axisLine={false} width={36} />
+              <YAxis hide domain={[0, (max: number) => Math.ceil((max + 5) / 5) * 5]} />
               <Tooltip
                 cursor={{ stroke: "var(--blueprint)", strokeWidth: 1 }}
                 contentStyle={{ background: "var(--panel)", border: "1px solid var(--hairline)", borderRadius: 4, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink)" }}

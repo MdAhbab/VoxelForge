@@ -7,7 +7,7 @@
 //  • Theme colours resolved once per theme (passed in as plain hex), never per frame.
 //  • Mounted lazily and only when scrolled into view (see Viewport3D wrapper).
 import { useEffect, useMemo, useRef } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Grid } from "@react-three/drei";
 import * as THREE from "three";
 import { type Mesh, meshTris, decimate, cross, sub, norm, type Vec3 } from "../../lib/geometry";
@@ -67,6 +67,9 @@ function buildGeometry(
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   if (cols) g.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+  // Centre on the bounding-box origin so every part (catalog parts extend
+  // asymmetrically in Z/Y) frames consistently and spins about its true centre.
+  g.center();
   g.computeVertexNormals();
   return g;
 }
@@ -133,23 +136,54 @@ function Part({
   );
 }
 
-function Rig({ autoRotate, interactive, span }: { autoRotate: boolean; interactive: boolean; span: number }) {
-  const { camera } = useThree();
+/** Turntable: spins its children around Y in world space, frame-rate independent.
+ *  Decoupled from OrbitControls so it works even when controls are disabled
+ *  (the hero / showcase viewports are non-interactive). */
+function Turntable({ spin, children }: { spin: boolean; children: React.ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    if (spin && ref.current) ref.current.rotation.y += Math.min(delta, 0.05) * 0.45;
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+const VIEW_DIR = new THREE.Vector3(1.15, 0.9, 1.7).normalize();
+const FOV = 35;
+
+/** Distance at which a bounding sphere of `radius` fits inside the FOV for a
+ *  given canvas aspect ratio — fits portrait (mobile) and landscape alike. */
+function fitDistance(radius: number, aspect: number) {
+  const vFov = (FOV * Math.PI) / 180;
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  return (radius / Math.sin(Math.min(vFov, hFov) / 2)) * 1.15;
+}
+
+function Rig({ interactive, radius }: { interactive: boolean; radius: number }) {
+  const { camera, size } = useThree();
+  const controls = useRef<any>(null);
   useEffect(() => {
-    camera.position.set(span * 1.15, span * 0.9, span * 1.7);
-    camera.lookAt(0, 0, 0);
-  }, [camera, span]);
-  // Auto-rotate is driven by OrbitControls; demand-mode frames are requested by the
-  // parent Canvas frameloop (set to "always" only while something animates).
+    const cam = camera as THREE.PerspectiveCamera;
+    const dist = fitDistance(radius, size.width / Math.max(1, size.height));
+    cam.position.copy(VIEW_DIR.clone().multiplyScalar(dist));
+    cam.near = Math.max(0.1, dist / 100);
+    cam.far = dist * 10;
+    cam.updateProjectionMatrix();
+    // Re-sync OrbitControls to the repositioned camera (it caches spherical coords
+    // from the camera's position at mount, so without this it snaps back).
+    if (controls.current) { controls.current.target.set(0, 0, 0); controls.current.update(); }
+    else cam.lookAt(0, 0, 0);
+  }, [camera, size.width, size.height, radius]);
+  // OrbitControls handles only manual orbit; the part's own spin is the Turntable.
   return (
     <OrbitControls
+      ref={controls}
+      makeDefault
       enabled={interactive}
       enablePan={false}
-      autoRotate={autoRotate}
-      autoRotateSpeed={0.7}
+      enableZoom={interactive}
       enableDamping
-      minDistance={span * 0.8}
-      maxDistance={span * 3.2}
+      minDistance={radius * 1.4}
+      maxDistance={radius * 6}
       target={[0, 0, 0]}
     />
   );
@@ -160,14 +194,18 @@ export default function ForgeViewport(props: ForgeViewportProps) {
     mesh, autoRotate = false, interactive = true, printProgress, active, colors,
   } = props;
   const span = Math.max(mesh.bbox[0], mesh.bbox[1], mesh.bbox[2]) || 1;
+  const radius = 0.5 * Math.hypot(mesh.bbox[0], mesh.bbox[1], mesh.bbox[2]) || 1;
   const animating = active && (autoRotate || printProgress != null);
   const dirLight = useRef<THREE.DirectionalLight>(null);
+  // Sensible initial camera position (landscape assumption) so OrbitControls
+  // initialises from the right distance; the Rig effect refines it per aspect.
+  const initialPos = VIEW_DIR.clone().multiplyScalar(fitDistance(radius, 1.4)).toArray() as [number, number, number];
 
   return (
     <Canvas
       frameloop={!active ? "never" : animating ? "always" : "demand"}
       dpr={[1, 2]}
-      camera={{ fov: 35, near: 0.1, far: span * 12 }}
+      camera={{ fov: FOV, position: initialPos, near: 0.1, far: span * 12 }}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
       onCreated={({ gl }) => { gl.localClippingEnabled = true; }}
       style={{ width: "100%", height: "100%", display: "block", cursor: interactive ? "grab" : "default" }}
@@ -186,17 +224,19 @@ export default function ForgeViewport(props: ForgeViewportProps) {
         fadeStrength={1.5}
         infiniteGrid={false}
       />
-      <Part
-        mesh={mesh}
-        mode={props.mode}
-        tint={props.tint}
-        heatmap={props.heatmap}
-        flaggedTags={props.flaggedTags}
-        showOverhangs={props.showOverhangs}
-        printProgress={printProgress}
-        colors={colors}
-      />
-      <Rig autoRotate={!!autoRotate && active} interactive={interactive} span={span} />
+      <Turntable spin={!!autoRotate && active}>
+        <Part
+          mesh={mesh}
+          mode={props.mode}
+          tint={props.tint}
+          heatmap={props.heatmap}
+          flaggedTags={props.flaggedTags}
+          showOverhangs={props.showOverhangs}
+          printProgress={printProgress}
+          colors={colors}
+        />
+      </Turntable>
+      <Rig interactive={interactive} radius={radius} />
     </Canvas>
   );
 }

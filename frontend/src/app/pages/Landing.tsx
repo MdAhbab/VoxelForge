@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
-import { motion, useScroll, useTransform, useMotionValueEvent, useInView } from "motion/react";
+import { useScroll, useMotionValueEvent, useInView } from "motion/react";
 import { ArrowRight, Layers, ScanLine, Gauge, Boxes } from "lucide-react";
 
 import { partById } from "../lib/catalog";
@@ -43,7 +43,7 @@ function Hero({ mesh, reduced }: { mesh: Mesh; reduced: boolean }) {
 
   const vol = meshVolumeCm3(mesh) * (0.2 + 0.8 * progress);
   const tick = computeQuote({ volumeCm3: vol, bboxMax: 110, materialId: "pla", infill: 20, layerHeight: 0.2, finish: "As printed", qty: 1 }).total;
-  const rotate = useTransform(scrollYProgress, [0.8, 1], [0, reduced ? 0 : 18]);
+  const printed = progress > 0.985;
 
   return (
     <section ref={ref} className={`relative ${reduced ? "" : "lg:h-[240vh]"}`}>
@@ -71,10 +71,12 @@ function Hero({ mesh, reduced }: { mesh: Mesh; reduced: boolean }) {
             <div className="mt-8 max-w-sm"><DimensionLine label={`${mesh.bbox.map((d: number) => d.toFixed(0)).join(" × ")} MM`} /></div>
           </div>
 
-          <motion.div style={{ rotate }} className="relative h-[42vh] min-h-[260px] lg:h-[64vh]">
-            <Viewport3D mesh={mesh} mode="solid" tint="#cfd6df" printProgress={progress} interactive={false} autoRotate={progress > 0.99} />
-            <div className="pointer-events-none absolute right-2 top-2"><Anno>scroll to print →</Anno></div>
-          </motion.div>
+          <div className="relative h-[42vh] min-h-[260px] lg:h-[64vh]">
+            <Viewport3D mesh={mesh} mode="solid" tint="#cfd6df" printProgress={progress} interactive={false} autoRotate={printed} />
+            <div className="pointer-events-none absolute right-2 top-2">
+              <Anno>{printed ? "finished · turntable" : "scroll to print →"}</Anno>
+            </div>
+          </div>
         </div>
         {!reduced && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2"><Anno>scroll</Anno></div>

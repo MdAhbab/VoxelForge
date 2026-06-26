@@ -1,5 +1,6 @@
 import uuid
 import datetime
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -7,15 +8,27 @@ from typing import List
 
 from . import models, schemas, pricing
 from .database import engine, get_db
+from .seed import seed_db
 
-models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create tables and seed reference data (materials + catalog) on first run so
+    # the frontend always has a populated /materials and /catalog to load.
+    models.Base.metadata.create_all(bind=engine)
+    seed_db()
+    yield
 
+
+app = FastAPI(title="VoxelForge API", lifespan=lifespan)
+
+# Note: cannot combine wildcard origins with credentials (browsers reject it).
+# The app uses no cookies/credentials, so a wildcard origin without credentials
+# is correct and keeps local dev + Vercel preview working.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

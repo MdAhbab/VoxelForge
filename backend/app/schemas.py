@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from .models import QuoteSource, OrderStatus
 
@@ -18,8 +18,7 @@ class MaterialBase(BaseModel):
 class MaterialOut(MaterialBase):
     id: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Catalog
 class ParamDef(BaseModel):
@@ -45,8 +44,7 @@ class CatalogPartOut(BaseModel):
     presets_json: List[Preset]
     thumb: Optional[str]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Uploads
 class ModelUploadOut(BaseModel):
@@ -59,8 +57,7 @@ class ModelUploadOut(BaseModel):
     issues_json: List[Dict[str, Any]]
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Pricing
 class QuoteInput(BaseModel):
@@ -91,8 +88,7 @@ class QuoteOut(BaseModel):
     effectiveVolume: float
     currency: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Preflight
 class PreflightRequest(BaseModel):
@@ -107,8 +103,7 @@ class PreflightReportOut(BaseModel):
     suggested_orientation_json: Dict[str, Any]
     score: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Agents
 class PrintabilityAgentRequest(BaseModel):

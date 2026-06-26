@@ -1,4 +1,3 @@
-import json
 from .database import engine, SessionLocal
 from . import models
 
@@ -58,12 +57,15 @@ def seed_db():
     for m in materials:
         db.add(models.Material(**m))
 
+    # Catalog parts mirror the frontend geometry generators in
+    # frontend/src/app/lib/catalog.ts — same ids, param keys, ranges and presets —
+    # so the backend record maps cleanly onto its mesh builder (no fallback collapse).
     parts = [
         {
-            "id": "c_phonestand",
-            "name": "Adjustable phone stand",
-            "category": "Desk accessories",
-            "blurb": "A clean, weighted stand with a cable channel.",
+            "id": "phone-stand",
+            "name": "Adjustable Phone Stand",
+            "category": "Desk",
+            "blurb": "Angled cradle with a cable pass-through.",
             "params_schema_json": [
                 { "key": "deviceW", "label": "Device width", "min": 60, "max": 100, "step": 1, "unit": "mm", "def": 78 },
                 { "key": "angle", "label": "Viewing angle", "min": 35, "max": 75, "step": 1, "unit": "°", "def": 60 },
@@ -72,40 +74,74 @@ def seed_db():
                 { "key": "wall", "label": "Wall thickness", "min": 1.2, "max": 6, "step": 0.2, "unit": "mm", "def": 3 }
             ],
             "presets_json": [
-                { "label": "iPhone 15 Pro Max", "values": { "deviceW": 78, "angle": 60, "height": 130, "slot": 15, "wall": 3.2 } },
-                { "label": "iPad Mini (portrait)", "values": { "deviceW": 135, "angle": 55, "height": 180, "slot": 12, "wall": 4 } }
+                { "label": "iPhone 15 Pro Max", "values": { "deviceW": 77, "angle": 62, "height": 116 } },
+                { "label": "Compact 60°", "values": { "deviceW": 70, "angle": 60, "height": 88 } },
+                { "label": "Tablet lean", "values": { "deviceW": 96, "angle": 55, "height": 130 } }
             ]
         },
         {
-            "id": "c_drawerbox",
-            "name": "Gridfinity-style bin",
-            "category": "Organization",
-            "blurb": "Stackable drawer organizer bins.",
-            "params_schema_json": [
-                { "key": "unitsX", "label": "Width (units)", "min": 1, "max": 6, "step": 1, "unit": "U", "def": 2 },
-                { "key": "unitsY", "label": "Depth (units)", "min": 1, "max": 6, "step": 1, "unit": "U", "def": 1 },
-                { "key": "height", "label": "Height (units)", "min": 1, "max": 8, "step": 1, "unit": "U", "def": 3 },
-                { "key": "wall", "label": "Wall thickness", "min": 0.8, "max": 3, "step": 0.2, "unit": "mm", "def": 1.2 }
-            ],
-            "presets_json": [
-                { "label": "1x1 bit holder", "values": { "unitsX": 1, "unitsY": 1, "height": 2, "wall": 1.2 } },
-                { "label": "2x3 tool tray", "values": { "unitsX": 2, "unitsY": 3, "height": 3, "wall": 1.6 } }
-            ]
-        },
-        {
-            "id": "c_knob",
-            "name": "Knurled replacement knob",
+            "id": "knob",
+            "name": "Replacement Knob",
             "category": "Hardware",
-            "blurb": "Press-fit or threaded knob for appliances.",
+            "blurb": "Press-fit knob for drawers & appliances.",
             "params_schema_json": [
-                { "key": "outerD", "label": "Outer diameter", "min": 15, "max": 60, "step": 1, "unit": "mm", "def": 30 },
-                { "key": "height", "label": "Height", "min": 10, "max": 40, "step": 1, "unit": "mm", "def": 18 },
-                { "key": "shaftD", "label": "Shaft hole", "min": 4, "max": 12, "step": 0.1, "unit": "mm", "def": 6.1 },
-                { "key": "knurl", "label": "Knurl density", "min": 10, "max": 50, "step": 1, "unit": "n", "def": 24 }
+                { "key": "dia", "label": "Diameter", "min": 18, "max": 60, "step": 1, "unit": "mm", "def": 36 },
+                { "key": "height", "label": "Height", "min": 10, "max": 40, "step": 1, "unit": "mm", "def": 22 },
+                { "key": "shaft", "label": "Shaft bore", "min": 4, "max": 14, "step": 0.5, "unit": "mm", "def": 6 },
+                { "key": "wall", "label": "Wall thickness", "min": 1.2, "max": 6, "step": 0.2, "unit": "mm", "def": 2.4 }
             ],
             "presets_json": [
-                { "label": "Potentiometer (6mm)", "values": { "outerD": 22, "height": 16, "shaftD": 6.1, "knurl": 18 } },
-                { "label": "Oven dial (D-shaft)", "values": { "outerD": 45, "height": 22, "shaftD": 8.2, "knurl": 36 } }
+                { "label": "Fits 6 mm dowel", "values": { "shaft": 6, "dia": 34 } },
+                { "label": "Fits 18 mm dowel", "values": { "shaft": 14, "dia": 52, "height": 30 } }
+            ]
+        },
+        {
+            "id": "tray",
+            "name": "Drawer Organiser",
+            "category": "Storage",
+            "blurb": "Divided tray, sized to your drawer.",
+            "params_schema_json": [
+                { "key": "width", "label": "Width", "min": 60, "max": 220, "step": 2, "unit": "mm", "def": 140 },
+                { "key": "depth", "label": "Depth", "min": 60, "max": 180, "step": 2, "unit": "mm", "def": 100 },
+                { "key": "height", "label": "Height", "min": 18, "max": 70, "step": 1, "unit": "mm", "def": 36 },
+                { "key": "div", "label": "Dividers", "min": 0, "max": 4, "step": 1, "unit": "×", "def": 2 },
+                { "key": "wall", "label": "Wall thickness", "min": 1.2, "max": 5, "step": 0.2, "unit": "mm", "def": 2 }
+            ],
+            "presets_json": [
+                { "label": "Cutlery 3-bay", "values": { "width": 200, "depth": 120, "div": 3 } },
+                { "label": "Desk tidy", "values": { "width": 120, "depth": 90, "div": 2, "height": 28 } }
+            ]
+        },
+        {
+            "id": "bracket",
+            "name": "Wall Bracket",
+            "category": "Hardware",
+            "blurb": "Load-bearing L bracket with gusset.",
+            "params_schema_json": [
+                { "key": "legA", "label": "Leg A", "min": 30, "max": 120, "step": 2, "unit": "mm", "def": 70 },
+                { "key": "legB", "label": "Leg B", "min": 30, "max": 120, "step": 2, "unit": "mm", "def": 70 },
+                { "key": "width", "label": "Width", "min": 16, "max": 60, "step": 1, "unit": "mm", "def": 28 },
+                { "key": "thick", "label": "Thickness", "min": 2, "max": 10, "step": 0.5, "unit": "mm", "def": 5 }
+            ],
+            "presets_json": [
+                { "label": "Shelf 70×70", "values": { "legA": 70, "legB": 70 } },
+                { "label": "Heavy 120×80", "values": { "legA": 120, "legB": 80, "thick": 8, "width": 40 } }
+            ]
+        },
+        {
+            "id": "planter",
+            "name": "Tapered Planter",
+            "category": "Home",
+            "blurb": "Self-watering tapered pot.",
+            "params_schema_json": [
+                { "key": "dia", "label": "Diameter", "min": 50, "max": 160, "step": 2, "unit": "mm", "def": 96 },
+                { "key": "height", "label": "Height", "min": 50, "max": 200, "step": 2, "unit": "mm", "def": 120 },
+                { "key": "taper", "label": "Taper", "min": 0, "max": 40, "step": 1, "unit": "mm", "def": 18 },
+                { "key": "wall", "label": "Wall thickness", "min": 1.6, "max": 6, "step": 0.2, "unit": "mm", "def": 2.8 }
+            ],
+            "presets_json": [
+                { "label": "Succulent", "values": { "dia": 70, "height": 64 } },
+                { "label": "Herb pot", "values": { "dia": 120, "height": 140 } }
             ]
         }
     ]

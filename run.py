@@ -22,7 +22,7 @@ def main():
     python_exe = os.path.join(venv_dir, "Scripts", "python.exe") if os.name == 'nt' else os.path.join(venv_dir, "bin", "python")
     
     print("Installing backend dependencies...")
-    subprocess.run([python_exe, "-m", "pip", "install", "fastapi", "uvicorn", "sqlalchemy", "pydantic"], cwd=backend_dir, check=True)
+    subprocess.run([python_exe, "-m", "pip", "install", "-r", "requirements.txt"], cwd=backend_dir, check=True)
     
     # 2. Setup frontend
     node_modules_dir = os.path.join(frontend_dir, "node_modules")

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Cpu, Box, ListChecks, SlidersHorizontal, Layers3, Activity } from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { MATERIALS } from "../lib/materials";
 import { CATALOG } from "../lib/catalog";
 import { CURRENCY } from "../lib/pricing";
@@ -24,6 +25,11 @@ const MACHINES = [
   { name: "Form 3 #1", process: "SLA", rate: 2.4, vol: "145³", state: "running" },
   { name: "HP MJF #1", process: "MJF", rate: 1.9, vol: "380³", state: "running" },
 ];
+// Jobs completed per day over the last week — drives the throughput chart.
+const THROUGHPUT = [
+  { day: "Mon", jobs: 12 }, { day: "Tue", jobs: 18 }, { day: "Wed", jobs: 15 },
+  { day: "Thu", jobs: 23 }, { day: "Fri", jobs: 27 }, { day: "Sat", jobs: 14 }, { day: "Sun", jobs: 9 },
+];
 
 export function Operator() {
   const [thinWall, setThinWall] = useState(1.0);
@@ -39,6 +45,36 @@ export function Operator() {
           <MonoStat label="queue" value={QUEUE.filter((q) => q.status !== "done").length} />
           <MonoStat label="machines up" value={`${MACHINES.filter((m) => m.state === "running").length}/${MACHINES.length}`} />
           <MonoStat label="materials" value={MATERIALS.length} />
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-[6px] border border-hairline bg-bg-elev p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <Anno>shop throughput · jobs completed · last 7 days</Anno>
+          <span className="mono text-[0.72rem] text-ink-dim">
+            {THROUGHPUT.reduce((a, b) => a + b.jobs, 0)} total
+          </span>
+        </div>
+        <div className="h-[160px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={THROUGHPUT} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
+              <defs>
+                <linearGradient id="vfThroughput" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--signal)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--signal)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="var(--hairline)" vertical={false} />
+              <XAxis dataKey="day" stroke="var(--ink-dim)" tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--ink-dim)" tick={{ fontSize: 11, fontFamily: "var(--font-mono)" }} tickLine={false} axisLine={false} width={36} />
+              <Tooltip
+                cursor={{ stroke: "var(--blueprint)", strokeWidth: 1 }}
+                contentStyle={{ background: "var(--panel)", border: "1px solid var(--hairline)", borderRadius: 4, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink)" }}
+                labelStyle={{ color: "var(--ink-dim)" }}
+              />
+              <Area type="monotone" dataKey="jobs" stroke="var(--signal)" strokeWidth={2} fill="url(#vfThroughput)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

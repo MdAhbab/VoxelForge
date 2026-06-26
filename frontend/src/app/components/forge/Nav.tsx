@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { CommandPalette } from "./CommandPalette";
 import { Anno } from "./primitives";
 import { useCart, useAuth } from "../../lib/store";
 import { Menu, X, ShoppingCart, ShieldCheck, User2, LogOut, Package2, Bookmark } from "lucide-react";
@@ -48,6 +49,7 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <CommandPalette />
           <ThemeToggle />
           <Link to="/cart" className="relative inline-flex items-center justify-center rounded-[4px] border border-hairline bg-bg-elev p-2 hover:border-signal/50 transition-colors" aria-label="Cart">
             <ShoppingCart size={16} className="text-ink" />

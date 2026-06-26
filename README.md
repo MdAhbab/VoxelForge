@@ -166,11 +166,28 @@ Full spec in [`AGENTS.md`](AGENTS.md). Four agents:
 
 ---
 
-## 8. Run (once implemented)
+## 8. Run
+
+**One command** (sets up a venv, installs both stacks, starts both servers):
+```bash
+python run.py
+```
+
+**Or run each stack manually:**
 ```bash
 cd backend && uv sync && uvicorn app.main:app --reload     # http://localhost:8000/docs
+#   (or: pip install -r requirements.txt)
 cd frontend && npm install && npm run dev                  # http://localhost:5173
 ```
+
+The backend seeds its reference data (materials + parametric catalog) on first
+start, so the app works immediately. The frontend also ships a built-in fallback
+catalog/material set and computes quotes locally, so the configurator stays fully
+usable even with no backend running (e.g. the static Vercel preview).
+
+> The Gemma agent endpoints (`/api/agents/*`) are stubbed; the configurator's
+> parametric and budget-solver surfaces run on the deterministic heuristics in the
+> frontend (`lib/pricing.ts`, `parseNL`) pending the Gemma wiring (milestone M5).
 
 See [`DESIGN-INSTRUCTIONS.md`](DESIGN-INSTRUCTIONS.md) and [`AGENTS.md`](AGENTS.md).
 
